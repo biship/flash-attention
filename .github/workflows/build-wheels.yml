@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         pyver: ["3.11"]
-        torch-version: ['2.2.0']
+        torch-version: ['2.1.2']
         cuda: ["12.2.2"]
     defaults:
       run:
@@ -61,19 +61,22 @@ jobs:
       - name: Install Dependencies
         run: |
           $torchver = $env:PYTORCHVER
-          echo $torchver
+          Write-Output "torchver: $torchver"
           $cudaVersion = $env:CUDAVER
-          echo $cudaVersion
+          Write-Output "cudaVersion: $cudaVersion"
           $cudaVersionPytorch = $env:CUDAVER.Remove($env:CUDAVER.LastIndexOf('.')).Replace('.','')
-          echo $cudaVersionPytorch
+          Write-Output "cudaVersionPytorch: $cudaVersionPytorch"
           $cudaChannels = ''
           $cudaNum = [int]$cudaVersion.substring($cudaVersion.LastIndexOf('.')+1)
-          echo $cudaNum
+          Write-Output "cudaNum: $cudaNum"
           while ($cudaNum -ge 0) { $cudaChannels += '-c nvidia/label/cuda-' + $cudaVersion.Remove($cudaVersion.LastIndexOf('.')+1) + $cudaNum + ' '; $cudaNum-- }
           mamba install -y 'cuda' $cudaChannels.TrimEnd().Split()
+          Write-Output "cudaChannels: $cudaChannels"
+          mamba list cuda
           if (!(mamba list cuda)[-1].contains('cuda')) {sleep -s 10; mamba install -y 'cuda' $cudaChannels.TrimEnd().Split()}
           if (!(mamba list cuda)[-1].contains('cuda')) {throw 'CUDA Toolkit failed to install!'}
-
+          mamba list cuda
+          
           pip install --upgrade pip
           # python -m pip install --upgrade build setuptools wheel packaging ninja torch==$torchver --extra-index-url "https://download.pytorch.org/whl/cu$cudaVersionPytorch"
           python -m pip install --upgrade build setuptools wheel packaging ninja torch==$torchver --extra-index-url "https://download.pytorch.org/whl/cu121"
@@ -94,7 +97,7 @@ jobs:
           python -m build -n --wheel
           
           $wheel = (gi '.\dist\*.whl')[0]
-          $wheelname = $wheel.name.replace("flash_attn-$packageVersion-","flash_attn-$packageVersion+cu$cudaVersion"+"torch2.2cxx11abiFALSE-")
+          $wheelname = $wheel.name.replace("flash_attn-$packageVersion-","flash_attn-$packageVersion+cu$cudaVersion"+"torch2.1cxx11abiFALSE-")
           Move-Item $wheel.fullname ".\dist\$wheelname"
 
       - uses: actions/upload-artifact@v3
