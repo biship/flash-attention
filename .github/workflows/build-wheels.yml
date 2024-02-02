@@ -26,13 +26,15 @@ jobs:
     strategy:
       matrix:
         pyver: ["3.11"]
-        cuda: ["12.2.0"]
+        torch-version: ['2.2.0']
+        cuda: ["12.2.2"]
     defaults:
       run:
         shell: pwsh
     env:
         CUDAVER: ${{ matrix.cuda }}
         PCKGVER: ${{ inputs.version }}
+        PYTORCHVER: ${{ matrix.torch-version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -58,17 +60,24 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          $torchver = $env:PYTORCHVER
+          echo $torchver
           $cudaVersion = $env:CUDAVER
+          echo $cudaVersion
           $cudaVersionPytorch = $env:CUDAVER.Remove($env:CUDAVER.LastIndexOf('.')).Replace('.','')
+          echo $cudaVersionPytorch
           $cudaChannels = ''
           $cudaNum = [int]$cudaVersion.substring($cudaVersion.LastIndexOf('.')+1)
+          echo $cudaNum
           while ($cudaNum -ge 0) { $cudaChannels += '-c nvidia/label/cuda-' + $cudaVersion.Remove($cudaVersion.LastIndexOf('.')+1) + $cudaNum + ' '; $cudaNum-- }
           mamba install -y 'cuda' $cudaChannels.TrimEnd().Split()
           if (!(mamba list cuda)[-1].contains('cuda')) {sleep -s 10; mamba install -y 'cuda' $cudaChannels.TrimEnd().Split()}
           if (!(mamba list cuda)[-1].contains('cuda')) {throw 'CUDA Toolkit failed to install!'}
-          
-          python -m pip install --upgrade build setuptools wheel packaging ninja torch==2.2.0 --extra-index-url "https://download.pytorch.org/whl/cu$cudaVersionPytorch"
 
+          pip install --upgrade pip
+          # python -m pip install --upgrade build setuptools wheel packaging ninja torch==$torchver --extra-index-url "https://download.pytorch.org/whl/cu$cudaVersionPytorch"
+          python -m pip install --upgrade build setuptools wheel packaging ninja torch==$torchver --extra-index-url "https://download.pytorch.org/whl/cu121"
+    
       - name: Build Wheel
         id: build-wheel
         run: |
@@ -78,7 +87,7 @@ jobs:
           $env:CUDA_PATH = $env:CONDA_PREFIX
           $env:CUDA_HOME = $env:CONDA_PREFIX
           
-          $env:MAX_JOBS = '1'
+          $env:MAX_JOBS = '2'
           $env:FLASH_ATTENTION_FORCE_BUILD = 'TRUE'
           $env:FLASH_ATTENTION_FORCE_SINGLE_THREAD = 'TRUE'
           
