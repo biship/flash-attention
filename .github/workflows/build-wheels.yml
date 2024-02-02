@@ -85,7 +85,7 @@ jobs:
           python -m build -n --wheel
           
           $wheel = (gi '.\dist\*.whl')[0]
-          $wheelname = $wheel.name.replace("flash_attn-$packageVersion-","flash_attn-$packageVersion+cu$cudaVersion"+"torch2.1cxx11abiFALSE-")
+          $wheelname = $wheel.name.replace("flash_attn-$packageVersion-","flash_attn-$packageVersion+cu$cudaVersion"+"torch2.2cxx11abiFALSE-")
           Move-Item $wheel.fullname ".\dist\$wheelname"
 
       - uses: actions/upload-artifact@v3
